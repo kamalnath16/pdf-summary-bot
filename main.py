@@ -10,10 +10,10 @@ from fpdf import FPDF
 from flask import Flask
 
 # === API Keys from environment variables ===
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-UPI_ID = os.environ.get("UPI_ID")
-ADMIN_ID = int(os.environ.get("ADMIN_ID"))
+TELEGRAM_BOT_TOKEN = "7985662614:AAGmvRNpsNcHLGnzmDwUimzw8_dLEZh7fZ4"
+OPENAI_API_KEY = "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"
+UPI_ID = "technokamal93@okaxis"
+ADMIN_ID = 6439203415
 
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 openai.api_key = OPENAI_API_KEY
