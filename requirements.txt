@@ -1,0 +1,6 @@
+pyTelegramBotAPI
+openai
+PyMuPDF==1.21.1
+fpdf
+qrcode
+flask
