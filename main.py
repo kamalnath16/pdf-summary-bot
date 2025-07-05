@@ -50,24 +50,17 @@ menu.row("📬 Contact Admin")
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(message.chat.id,
-        f"👋 Hello {message.from_user.first_name}!
+    bot.send_message(message.chat.id, f"""
+👋 Hello {message.from_user.first_name}!
 
-"
-        "📄 Send me a PDF and I’ll summarize it using ChatGPT.
-"
-        "🆓 First summary is free.
-"
-        "💰 To unlock unlimited summaries:
+📄 Send me a PDF and I’ll summarize it using ChatGPT.
+🆓 First summary is free.
+💰 To unlock unlimited summaries:
 
-"
-        f"1. Pay ₹49 to UPI ID: `{UPI_ID}`
-"
-        f"2. Or scan the QR code below
-"
-        f"3. Send /verify {message.from_user.id} after payment",
-        parse_mode="Markdown",
-        reply_markup=menu)
+1. Pay ₹49 to UPI ID: `{UPI_ID}`
+2. Or scan the QR code below
+3. Send /verify {message.from_user.id} after payment
+""", parse_mode="Markdown", reply_markup=menu)
     with open(upi_qr_path, 'rb') as qr:
         bot.send_photo(message.chat.id, qr, caption="📸 Scan this UPI QR to pay ₹49")
 
@@ -88,7 +81,7 @@ def stats(message):
         return
     total_users = len(user_usage)
     paid = len(paid_users)
-    msg = (f"📊 Bot Usage Stats:\n\n👤 Total Users: {total_users}\n💰 Paid Users: {paid}\n📄 Usage:\n")
+    msg = f"📊 Bot Usage Stats:\n\n👤 Total Users: {total_users}\n💰 Paid Users: {paid}\n📄 Usage:\n"
     for uid, count in user_usage.items():
         status = "✅" if uid in paid_users else "❌"
         msg += f" - {uid}: {count} file(s) | Paid: {status}\n"
@@ -97,21 +90,13 @@ def stats(message):
 @bot.message_handler(func=lambda m: m.text == "💰 Buy Premium")
 def buy_premium(message):
     bot.send_message(message.chat.id,
-        f"💳 To unlock premium access, pay ₹49 to:
-
-UPI ID: `{UPI_ID}`
-Then send /verify {message.from_user.id}",
+        f"💳 To unlock premium access, pay ₹49 to:\n\nUPI ID: `{UPI_ID}`\nThen send /verify {message.from_user.id}",
         parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text == "📄 Help")
 def help_text(message):
     bot.send_message(message.chat.id,
-        "📚 *How to use this bot:*
-
-1. Send any PDF file
-2. Get a ChatGPT-powered summary
-3. First summary is free
-4. For unlimited use, pay ₹49 and verify",
+        "📚 *How to use this bot:*\n\n1. Send any PDF file\n2. Get a ChatGPT-powered summary\n3. First summary is free\n4. For unlimited use, pay ₹49 and verify",
         parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text == "📬 Contact Admin")
@@ -125,8 +110,7 @@ def handle_pdf(message):
     if user_id in paid_users and paid_users[user_id] < now:
         del paid_users[user_id]
     if user_id not in paid_users and user_usage.get(user_id, 0) >= 1:
-        bot.reply_to(message, f"🔒 You’ve used your 1 free summary.
-Pay ₹49 to `{UPI_ID}` and send /verify {user_id} to continue.", parse_mode="Markdown")
+        bot.reply_to(message, f"🔒 You’ve used your 1 free summary.\nPay ₹49 to `{UPI_ID}` and send /verify {user_id} to continue.", parse_mode="Markdown")
         return
 
     file_info = bot.get_file(message.document.file_id)
