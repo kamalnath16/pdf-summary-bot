@@ -1,15 +1,16 @@
-import os
 import telebot
 import openai
 import fitz
 import qrcode
 import threading
+import os
+import requests
 from datetime import datetime, timedelta
 from tempfile import NamedTemporaryFile
 from fpdf import FPDF
 from flask import Flask
 
-# === API Keys from environment variables ===
+# === 🔐 Hardcoded Keys (Secure with ENV in production) ===
 TELEGRAM_BOT_TOKEN = "7985662614:AAGmvRNpsNcHLGnzmDwUimzw8_dLEZh7fZ4"
 OPENAI_API_KEY = "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"
 UPI_ID = "technokamal93@okaxis"
@@ -17,15 +18,15 @@ ADMIN_ID = 6439203415
 
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 openai.api_key = OPENAI_API_KEY
-
 user_usage = {}
 paid_users = {}
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return "PDF Summary Bot Running"
+    return "✅ Bot is running!"
 
+# === 🧾 Generate UPI QR code ===
 def generate_qr():
     qr = qrcode.make(f"upi://pay?pa={UPI_ID}&pn=Kamal&am=49")
     qr_path = "upi_qr.png"
@@ -34,6 +35,7 @@ def generate_qr():
 
 upi_qr_path = generate_qr()
 
+# === 📄 Summary to PDF ===
 def make_summary_pdf(text, username):
     pdf = FPDF()
     pdf.add_page()
@@ -44,10 +46,20 @@ def make_summary_pdf(text, username):
     pdf.output(filename)
     return filename
 
+# === 🤖 Menu Buttons ===
 menu = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
 menu.row("💰 Buy Premium", "📄 Help")
 menu.row("📬 Contact Admin")
 
+# === 🧹 Remove Telegram webhook to allow polling ===
+def delete_webhook():
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteWebhook"
+    try:
+        requests.get(url)
+    except Exception as e:
+        print("Webhook delete failed:", e)
+
+# === /start ===
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.send_message(message.chat.id, f"""
@@ -64,6 +76,7 @@ def start(message):
     with open(upi_qr_path, 'rb') as qr:
         bot.send_photo(message.chat.id, qr, caption="📸 Scan this UPI QR to pay ₹49")
 
+# === /verify <user_id> ===
 @bot.message_handler(commands=['verify'])
 def verify(message):
     parts = message.text.strip().split()
@@ -75,6 +88,7 @@ def verify(message):
     else:
         bot.reply_to(message, "❌ Invalid. Use: /verify <user_id>")
 
+# === /stats ===
 @bot.message_handler(commands=['stats'])
 def stats(message):
     if message.from_user.id != ADMIN_ID:
@@ -87,22 +101,26 @@ def stats(message):
         msg += f" - {uid}: {count} file(s) | Paid: {status}\n"
     bot.send_message(message.chat.id, msg)
 
+# === Menu: Buy Premium ===
 @bot.message_handler(func=lambda m: m.text == "💰 Buy Premium")
 def buy_premium(message):
     bot.send_message(message.chat.id,
         f"💳 To unlock premium access, pay ₹49 to:\n\nUPI ID: `{UPI_ID}`\nThen send /verify {message.from_user.id}",
         parse_mode="Markdown")
 
+# === Menu: Help ===
 @bot.message_handler(func=lambda m: m.text == "📄 Help")
 def help_text(message):
     bot.send_message(message.chat.id,
         "📚 *How to use this bot:*\n\n1. Send any PDF file\n2. Get a ChatGPT-powered summary\n3. First summary is free\n4. For unlimited use, pay ₹49 and verify",
         parse_mode="Markdown")
 
+# === Menu: Contact ===
 @bot.message_handler(func=lambda m: m.text == "📬 Contact Admin")
 def contact(message):
     bot.send_message(message.chat.id, "📩 Contact: @yourusername (Telegram)")
 
+# === PDF Upload ===
 @bot.message_handler(content_types=['document'])
 def handle_pdf(message):
     user_id = message.from_user.id
@@ -139,6 +157,7 @@ def handle_pdf(message):
     finally:
         os.remove(pdf_path)
 
+# === PDF Text Extract ===
 def extract_text(path):
     text = ""
     with fitz.open(path) as doc:
@@ -146,6 +165,7 @@ def extract_text(path):
             text += page.get_text()
     return text[:6000]
 
+# === OpenAI Summary ===
 def summarize_text(text):
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -155,9 +175,12 @@ def summarize_text(text):
     )
     return response['choices'][0]['message']['content']
 
+# === Start Bot ===
 def run_bot():
+    delete_webhook()
     bot.infinity_polling()
 
+# === Flask + Bot Thread ===
 if __name__ == "__main__":
     threading.Thread(target=run_bot).start()
     app.run(host='0.0.0.0', port=8080)
